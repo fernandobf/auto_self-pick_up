@@ -1,0 +1,29 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <title>QR Code - Entrada</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+      body {
+        font-family: sans-serif;
+        text-align: center;
+        padding: 2rem;
+      }
+      #qrcode {
+        margin: 2rem auto;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Aponte a câmera para acessar o sistema</h1>
+    <div id="qrcode"></div>
+    <script>
+      new QRCode(document.getElementById("qrcode"), {
+        text: "http://localhost:5173/",
+        width: 256,
+        height: 256,
+      });
+    </script>
+  </body>
+</html>
