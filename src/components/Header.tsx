@@ -18,7 +18,7 @@ function Header() {
     <>
         <div className="header">
             <div className="header-img">
-                <img className="school-logo" src="./public/school-logo.png" alt="" />
+                <img className="school-logo" src="./school-logo.png" alt="" />
             </div>
             <div className="data-time">
                 {gerarDataFormatada()}
