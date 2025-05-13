@@ -114,11 +114,7 @@ function StudentList() {
       .map((aluno, index) => ({ aluno, index }))
       .filter(({ aluno, index }) => selectedStudents.has(generateStudentId(aluno, index)));
 
-    // const url = "https://cors-anywhere.herokuapp.com/https://script.google.com/macros/s/AKfycbzXbl0HQ9NfsskL3fxz_-QUeBAyxeh85GblPpPN6aObkqjmu_gadjzb2yJS22CUDTYL/exec?act=start_process";
-
-    const url =
-      "https://script.google.com/macros/s/AKfycbzXbl0HQ9NfsskL3fxz_-QUeBAyxeh85GblPpPN6aObkqjmu_gadjzb2yJS22CUDTYL/exec?act=start_process";
-
+    const url = "https://cors-anywhere.herokuapp.com/https://script.google.com/macros/s/AKfycbzXbl0HQ9NfsskL3fxz_-QUeBAyxeh85GblPpPN6aObkqjmu_gadjzb2yJS22CUDTYL/exec?act=start_process";
 
     try {
       await Promise.all(
