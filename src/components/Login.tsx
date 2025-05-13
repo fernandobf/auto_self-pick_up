@@ -53,18 +53,20 @@ function Login() {
   };
 
   return (
-    <div className="container">
-      <h2>Login por TELEFONE</h2>
-      <input
-        type="text"
-        placeholder="Digite seu número (ex: 351910000001)"
-        value={phone}
-        onChange={(e) => setPhone(e.target.value)}
-      />
-      <button onClick={handleLogin} disabled={loading}>
-        {loading ? "Carregando..." : "Entrar"}
-      </button>
-      {error && <p className="error-message">{error}</p>}
+    <div className="content login">
+      <div className="container">
+        <h2>Login por TELEFONE</h2>
+        <input
+          type="number"
+          placeholder="(ex: 351910000001)"
+          value={phone}
+          onChange={(e) => setPhone(e.target.value)}
+        />
+        <button onClick={handleLogin} disabled={loading}>
+          {loading ? "Carregando..." : "Entrar"}
+        </button>
+        {error && <p className="error-message">{error}</p>}
+      </div>
     </div>
   );
 }

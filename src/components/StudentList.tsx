@@ -1,9 +1,12 @@
 import { useState, useEffect } from "react";
+import { flushSync } from "react-dom";
 
 function StudentList() {
   const [alunos, setAlunos] = useState<any[]>([]);
   const [selectedStudents, setSelectedStudents] = useState<Set<string>>(new Set());
   const [logs, setLogs] = useState<any[]>([]);
+  const [btnTxt, setBtnTxt] = useState("Solicitar Checkout");
+  const [countdowns, setCountdowns] = useState<{ [key: string]: number }>({});
 
   useEffect(() => {
     const storedAlunos = localStorage.getItem("alunos");
@@ -17,10 +20,7 @@ function StudentList() {
   };
 
   const handleSelectAll = () => {
-    const selectableStudents = alunos.filter((aluno) => {
-      const log = getLogForStudent(aluno);
-      return !isLocked(log);
-    });
+    const selectableStudents = alunos.filter((aluno) => !isLocked(getLogForStudent(aluno)));
     if (selectedStudents.size === selectableStudents.length) {
       setSelectedStudents(new Set());
     } else {
@@ -76,31 +76,56 @@ function StudentList() {
     if (!log || !log.log_timestamp) return false;
     const logTime = new Date(log.log_timestamp);
     const now = new Date();
-    const diffInMs = now.getTime() - logTime.getTime();
-    const diffInMinutes = diffInMs / 1000 / 60;
+    const diffInMinutes = (now.getTime() - logTime.getTime()) / 1000 / 60;
     return (log.log_status === "Iniciado" || log.log_status === "Em processamento") && diffInMinutes < 60;
   };
 
-  const handleCheckout = async () => {
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const newCountdowns: { [key: string]: number } = {};
+      alunos.forEach((aluno, index) => {
+        const log = getLogForStudent(aluno);
+        const studentId = generateStudentId(aluno, index);
+        if (log && isLocked(log)) {
+          const logTime = new Date(log.log_timestamp);
+          const now = new Date();
+          const diff = 60 * 60 * 1000 - (now.getTime() - logTime.getTime());
+          newCountdowns[studentId] = Math.max(0, Math.floor(diff / 1000));
+        }
+      });
+      setCountdowns(newCountdowns);
+    }, 1000);
 
+    return () => clearInterval(interval);
+  }, [alunos, logs]);
+
+  const formatTime = (seconds: number) => {
+    const m = String(Math.floor(seconds / 60)).padStart(2, "0");
+    const s = String(seconds % 60).padStart(2, "0");
+    return `${m}:${s}`;
+  };
+
+  const handleCheckout = async () => {
+    flushSync(() => setBtnTxt("Aguarde...."));
 
     if (selectedStudents.size === 0) return;
 
-    const studentsToLog = alunos.filter((aluno, index) =>
-      selectedStudents.has(generateStudentId(aluno, index))
-    );
+    const studentsToLog = alunos
+      .map((aluno, index) => ({ aluno, index }))
+      .filter(({ aluno, index }) => selectedStudents.has(generateStudentId(aluno, index)));
+
+    // const url = "https://cors-anywhere.herokuapp.com/https://script.google.com/macros/s/AKfycbzXbl0HQ9NfsskL3fxz_-QUeBAyxeh85GblPpPN6aObkqjmu_gadjzb2yJS22CUDTYL/exec?act=start_process";
 
     const url =
-      "https://cors-anywhere.herokuapp.com/https://script.google.com/macros/s/AKfycbzXbl0HQ9NfsskL3fxz_-QUeBAyxeh85GblPpPN6aObkqjmu_gadjzb2yJS22CUDTYL/exec?act=start_process";
+      "https://script.google.com/macros/s/AKfycbzXbl0HQ9NfsskL3fxz_-QUeBAyxeh85GblPpPN6aObkqjmu_gadjzb2yJS22CUDTYL/exec?act=start_process";
+
 
     try {
       await Promise.all(
-        studentsToLog.map(async (aluno) => {
+        studentsToLog.map(async ({ aluno }) => {
           const response = await fetch(url, {
             method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
+            headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
               studentName: aluno.student_name,
               tutorName: aluno.student_tutor_name,
@@ -114,10 +139,22 @@ function StudentList() {
         })
       );
 
+      // Remove os alunos da seleção visualmente
+      flushSync(() => {
+        const updatedSelected = new Set(selectedStudents);
+        studentsToLog.forEach(({ aluno, index }) => {
+          const id = generateStudentId(aluno, index);
+          updatedSelected.delete(id);
+        });
+        setSelectedStudents(updatedSelected);
+      });
+
       alert("Checkout solicitado com sucesso!");
     } catch (error) {
       console.error("Erro ao registrar checkout:", error);
       alert("Houve um erro ao processar o checkout.");
+    } finally {
+      setBtnTxt("Solicitar Checkout");
     }
   };
 
@@ -125,27 +162,27 @@ function StudentList() {
     selectedStudents.size ===
     alunos.filter((aluno) => !isLocked(getLogForStudent(aluno))).length;
 
-const allStudentsLocked = alunos.length > 0 && alunos.every((aluno) => isLocked(getLogForStudent(aluno)));
-
+  const allStudentsLocked =
+    alunos.length > 0 && alunos.every((aluno) => isLocked(getLogForStudent(aluno)));
 
   return (
-    <div style={{ padding: "2rem", color: "#333" }}>
+    <div className="content internal">
       <div>
-        {alunos[0] && alunos[0].student_tutor_name ? (
-          <p>
+        {alunos[0] && alunos[0].student_tutor_name && (
+          <h2>
             Olá, <b>{alunos[0].student_tutor_name}</b>.
-          </p>
-        ) : null}
+          </h2>
+        )}
       </div>
 
-      <h3>Lista de Alunos</h3>
+      <h3>Aluno(s):</h3>
 
       {alunos.length > 1 && (
         <button
+          className="btn-list"
           onClick={handleSelectAll}
           style={{
             padding: "0.5rem",
-            marginBottom: "1rem",
             backgroundColor: "#4CAF50",
             color: "white",
             border: "none",
@@ -161,49 +198,27 @@ const allStudentsLocked = alunos.length > 0 && alunos.every((aluno) => isLocked(
           const log = getLogForStudent(aluno);
           const status = log?.log_status || "Não iniciado";
           const locked = isLocked(log);
-const isCompleted = status === "Concluído";
-const disabled = locked || isCompleted;
+          const isCompleted = status === "Concluído";
+          const disabled = locked || isCompleted;
 
           return (
-<div
-  key={studentId}
-  style={{
-    color: "#333",
-    marginBottom: "1rem",
-    width: "294px",
-    padding: "1rem",
-    border: "1px solid #ccc",
-    cursor: disabled ? "not-allowed" : "pointer",
-    opacity: disabled ? 0.6 : 1,
-  }}
-  onClick={() => !disabled && handleSelectIndividual(aluno, index)}
->
-  <input
-    type="checkbox"
-    checked={selectedStudents.has(studentId)}
-    disabled={disabled}
-    onChange={(e) => e.stopPropagation()}
-  />
-
+            <div
+              key={studentId}
+              className={`btn-box ${selectedStudents.has(studentId) ? "box-active" : ""}`}
+              style={{
+                cursor: disabled ? "not-allowed" : "pointer",
+                opacity: disabled ? 0.45 : 1,
+              }}
+              onClick={() => !disabled && handleSelectIndividual(aluno, index)}
+            >
+              <p><strong>Nome:</strong> {aluno.student_name}</p>
+              <p><strong>Turma:</strong> {aluno.student_class}</p>
               <p>
-                <strong>Nome: </strong>
-                {aluno.student_name}
-              </p>
-              <p>
-                <strong>Turma: </strong>
-                {aluno.student_class}
-              </p>
-              <p>
-                <strong>Status: </strong>
+                <strong>Status:</strong>{" "}
                 <span
+                  className="status"
                   style={{
-                    color:  status === "Em processamento"
-                        ? "#fff"
-                        : status === "Iniciado"
-                        ? "#fff"
-                        : status === "Concluído"
-                        ? "#fff"
-                        : "inherit",
+                    color: status === "Não iniciado" ? "#333" : "#fff",
                     backgroundColor:
                       status === "Em processamento"
                         ? "green"
@@ -219,7 +234,7 @@ const disabled = locked || isCompleted;
               </p>
               {locked && (
                 <p style={{ fontSize: "0.9rem", color: "#666" }}>
-                  Aguardando 60 min para novo checkout.
+                  Aguarde <strong>{formatTime(countdowns[studentId] || 0)}</strong> min para nova solicitação.
                 </p>
               )}
             </div>
@@ -231,18 +246,15 @@ const disabled = locked || isCompleted;
 
       <button
         onClick={handleCheckout}
-        disabled={selectedStudents.size === 0 || allStudentsLocked}
+        disabled={selectedStudents.size === 0 || allStudentsLocked || btnTxt === "Aguarde...."}
+        className="btn-list"
         style={{
-          padding: "0.5rem",
-          marginTop: "1rem",
-          width: "100%",
-          backgroundColor: selectedStudents.size > 0 && !allStudentsLocked ? "#007BFF" : "#ccc",
-          color: "white",
-          border: "none",
+          color: selectedStudents.size > 0 && !allStudentsLocked ? "#000" : "#fff",
+          backgroundColor: selectedStudents.size > 0 && !allStudentsLocked ? "#f26729" : "#ccc",
           cursor: selectedStudents.size > 0 && !allStudentsLocked ? "pointer" : "not-allowed",
         }}
       >
-        Solicitar Checkout
+        {btnTxt}
       </button>
     </div>
   );
