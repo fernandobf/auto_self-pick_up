@@ -30,6 +30,5 @@
     "typescript-eslint": "^8.26.1",
     "vite": "^6.3.1"
   },
-  "homepage": "https://fernandobf.github.io/auto_self-pick_up",
-  
+  "homepage": "https://fernandobf.github.io/auto_self-pick_up"
 }
