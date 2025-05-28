@@ -34,6 +34,7 @@ body {
   align-items: center;
   width: 100%;
   flex-direction: column;
+  z-index: 1000;
 
   .header-img{
     background-color: #f26729;
@@ -43,13 +44,28 @@ body {
     flex: 1; /* ou width: 100%; */
   }
 
-  .data-time{
+  .sub-header{
     text-align: right;
     width: 100%;
-    padding: 10px 20px 10px 0;
+    padding: 10px 20px;
     font-size: 12px;
     background-color: #fff;
     box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.4);
+    display: flex;
+    p{
+      margin: 0 0 0 10px;
+      flex: 1;
+      text-align: left;
+    }
+    a{
+      margin-right: 10px;
+    }
+
+    .data-time{
+      text-align: right;
+      margin-right: 10px;
+    }
+
   }
 }
 
@@ -193,6 +209,10 @@ button:disabled {
 table{
       font-size: 14px;
 
+.text-center.py-4.text-gray-500{
+  text-align: center! important;
+}
+
 }
 
 thead{
@@ -232,6 +252,8 @@ font-size: 14px;
 }
 
 .warning {
+  margin-top: 0;
+  margin-left: 10px!important;
   background-color: #f98b7c;
   padding: 5px 10px;
   border: solid 1px #ae2414;
@@ -239,6 +261,23 @@ font-size: 14px;
   color: #ae2414;
   font-size: 14px;
   animation: blinkWarning 1s infinite;
+  text-align: center!important;
+  max-width: 50%;
+}
+
+.warning + p {
+    text-align: right!important;
+    margin-right: 10px!important;
+  }
+
+.logout-button{
+  color: #f00;
+  text-transform: uppercase;
+  
+
+  &:hover {
+    text-decoration: none;
+  }
 }
 
 

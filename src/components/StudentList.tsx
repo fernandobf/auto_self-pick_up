@@ -49,7 +49,23 @@ function StudentList() {
       );
       const data = await response.json();
       if (Array.isArray(data)) {
-        setLogs(data);
+        // Só atualiza logs se houver mudança real
+        const isDifferent =
+          data.length !== logs.length ||
+          data.some((item: any, i: number) => {
+            const log = logs[i];
+            return (
+              !log ||
+              log.log_student_name !== item.log_student_name ||
+              log.log_student_class !== item.log_student_class ||
+              log.log_timestamp !== item.log_timestamp ||
+              log.log_status !== item.log_status
+            );
+          });
+
+        if (isDifferent) {
+          setLogs(data);
+        }
       } else {
         console.warn("Resposta inesperada:", data);
       }
@@ -62,7 +78,7 @@ function StudentList() {
     fetchLogs();
     const interval = setInterval(fetchLogs, 5000);
     return () => clearInterval(interval);
-  }, []);
+  }, []); // roda só uma vez no mount
 
   const getLogForStudent = (aluno: any) => {
     return logs.find(
@@ -93,11 +109,19 @@ function StudentList() {
           newCountdowns[studentId] = Math.max(0, Math.floor(diff / 1000));
         }
       });
-      setCountdowns(newCountdowns);
+
+      // Verifica se mudou para evitar atualizações desnecessárias
+      const hasChanged =
+        Object.keys(newCountdowns).length !== Object.keys(countdowns).length ||
+        Object.keys(newCountdowns).some((key) => newCountdowns[key] !== countdowns[key]);
+
+      if (hasChanged) {
+        setCountdowns(newCountdowns);
+      }
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [alunos, logs]);
+  }, [alunos, logs, countdowns]);
 
   const formatTime = (seconds: number) => {
     const m = String(Math.floor(seconds / 60)).padStart(2, "0");
@@ -135,7 +159,6 @@ function StudentList() {
         })
       );
 
-      // Remove os alunos da seleção visualmente
       flushSync(() => {
         const updatedSelected = new Set(selectedStudents);
         studentsToLog.forEach(({ aluno, index }) => {

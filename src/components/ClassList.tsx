@@ -11,17 +11,29 @@ interface CheckoutLog {
   log_timestamp: string;
 }
 
+interface LiveCheckoutsProps {
+  setOpenOccurrencesCount: (count: number) => void;
+  setCurrentClass: (className: string) => void;
+}
+
 const POLL_INTERVAL = 5000;
 
-const LiveCheckouts = () => {
+const LiveCheckouts: React.FC<LiveCheckoutsProps> = ({
+  setOpenOccurrencesCount,
+  setCurrentClass,
+}) => {
   const [searchParams] = useSearchParams();
-  const currentClass = searchParams.get("name")?.toLowerCase() || "";
+  const currentClassParam = searchParams.get("name")?.toLowerCase() || "";
   const [logs, setLogs] = useState<CheckoutLog[]>([]);
   const prevLogIdsRef = useRef<Set<string>>(new Set());
   const beepRef = useRef<HTMLAudioElement | null>(null);
 
   useEffect(() => {
-    // Cria e pré-carrega o som
+    // Seta a turma atual para o header
+    setCurrentClass(currentClassParam);
+  }, [currentClassParam, setCurrentClass]);
+
+  useEffect(() => {
     beepRef.current = new Audio(`${import.meta.env.BASE_URL}beep.mp3`);
     beepRef.current.load();
   }, []);
@@ -38,7 +50,7 @@ const LiveCheckouts = () => {
   const fetchLogs = async () => {
     try {
       const response = await fetch(
-        `https://script.google.com/macros/s/AKfycbzXbl0HQ9NfsskL3fxz_-QUeBAyxeh85GblPpPN6aObkqjmu_gadjzb2yJS22CUDTYL/exec?act=class&name=${currentClass}`
+        `https://script.google.com/macros/s/AKfycbzXbl0HQ9NfsskL3fxz_-QUeBAyxeh85GblPpPN6aObkqjmu_gadjzb2yJS22CUDTYL/exec?act=class&name=${currentClassParam}`
       );
       const data: CheckoutLog[] = await response.json();
 
@@ -52,7 +64,7 @@ const LiveCheckouts = () => {
         const newLogs = sorted.filter(
           (log) =>
             !prevIds.has(log.log_id) &&
-            log.log_student_class.toLowerCase() === currentClass
+            log.log_student_class.toLowerCase() === currentClassParam
         );
 
         if (newLogs.length > 0) {
@@ -61,12 +73,22 @@ const LiveCheckouts = () => {
 
         prevLogIdsRef.current = new Set(sorted.map((log) => log.log_id));
         setLogs(sorted);
+
+        // Atualiza quantidade de ocorrências abertas
+        const openOccurrences = sorted.filter(
+          (log) =>
+            log.log_student_class.toLowerCase() === currentClassParam &&
+            log.log_status !== "Concluído"
+        );
+        setOpenOccurrencesCount(openOccurrences.length);
       } else {
         console.warn("Resposta inválida:", data);
         setLogs([]);
+        setOpenOccurrencesCount(0);
       }
     } catch (error) {
       console.error("Erro ao buscar logs:", error);
+      setOpenOccurrencesCount(0);
     }
   };
 
@@ -74,10 +96,10 @@ const LiveCheckouts = () => {
     fetchLogs();
     const interval = setInterval(fetchLogs, POLL_INTERVAL);
     return () => clearInterval(interval);
-  }, [currentClass]);
+  }, [currentClassParam]);
 
   const getRowClass = (log: CheckoutLog) => {
-    return log.log_student_class.toLowerCase() === currentClass
+    return log.log_student_class.toLowerCase() === currentClassParam
       ? "bg-yellow-200"
       : "";
   };
@@ -131,24 +153,9 @@ const LiveCheckouts = () => {
     return `${day}, às ${hours}h${minutes}min`;
   };
 
-  const openOccurrences = logs.filter(
-    (log) =>
-      log.log_student_class.toLowerCase() === currentClass &&
-      log.log_status !== "Concluído"
-  );
-
   return (
     <div className="content internal">
       <h2 className="text-xl font-bold mb-4">Checkouts em andamento</h2>
-
-      {openOccurrences.length > 0 && (
-        <p className="warning">
-          Existem{" "}
-          <strong>{openOccurrences.length.toString().padStart(2, "0")}</strong>{" "}
-          ocorrência{openOccurrences.length > 1 ? "s" : ""} em aberto para a
-          turma <strong>{currentClass.toUpperCase()}</strong>.
-        </p>
-      )}
 
       {logs.length === 0 ? (
         <p className="text-gray-500">Nenhum checkout registrado.</p>
@@ -177,42 +184,34 @@ const LiveCheckouts = () => {
                   <tr key={log.log_id} className={getRowClass(log)}>
                     <td className="border px-2 py-1">{log.log_student_name}</td>
                     <td className="border px-2 py-1">{log.log_student_tutor_name}</td>
-                    <td className="border px-2 py-1">{log.log_student_class}</td>
+                    <td className="border px-2 py-1">{log.log_student_class.toUpperCase()}</td>
                     <td className="border px-2 py-1">{formatDate(log.log_timestamp)}</td>
                     <td className="border px-2 py-1">
-                      {log.log_student_class.toLowerCase() === currentClass && (
-                        <>
-                          {log.log_status === "Iniciado" && (
-                            <button
-                              className="bg-blue-500 text-white px-2 py-1 rounded"
-                              onClick={() =>
-                                handleStatusUpdate(
-                                  log.log_id,
-                                  "Em processamento",
-                                  log.log_student_name
-                                )
-                              }
-                            >
-                              Aceitar solicitação
-                            </button>
-                          )}
-                          {log.log_status === "Em processamento" && (
-                            <button
-                              className="bg-green-600 text-white px-2 py-1 rounded"
-                              onClick={() =>
-                                handleStatusUpdate(
-                                  log.log_id,
-                                  "Concluído",
-                                  log.log_student_name
-                                )
-                              }
-                            >
-                              Concluir
-                            </button>
-                          )}
-                        </>
-                      )}
+                      {currentClassParam ? (
+                        log.log_status === "Iniciado" ? (
+                          <button
+                            className="btn btn-primary"
+                            onClick={() =>
+                              handleStatusUpdate(log.log_id, "Em processamento", log.log_student_name)
+                            }
+                          >
+                            Aceitar solicitação
+                          </button>
+                        ) : (
+                          <button
+                            className="btn btn-success"
+                            onClick={() =>
+                              handleStatusUpdate(log.log_id, "Concluído", log.log_student_name)
+                            }
+                          >
+                            Concluir
+                          </button>
+                        )
+                      ) : null}
                     </td>
+
+
+
                   </tr>
                 ))
             )}
