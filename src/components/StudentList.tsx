@@ -222,7 +222,7 @@ function StudentList() {
 
           return (
             <div
-              key={studentId}
+              key={`${studentId}-${getLogForStudent(aluno)?.log_status || 'na'}`}
               className={`btn-box ${selectedStudents.has(studentId) ? "box-active" : ""}`}
               style={{
                 cursor: disabled ? "not-allowed" : "pointer",
