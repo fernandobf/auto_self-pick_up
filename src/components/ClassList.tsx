@@ -18,15 +18,21 @@ const LiveCheckouts = () => {
   const currentClass = searchParams.get("name")?.toLowerCase() || "";
   const [logs, setLogs] = useState<CheckoutLog[]>([]);
   const prevLogIdsRef = useRef<Set<string>>(new Set());
+  const beepRef = useRef<HTMLAudioElement | null>(null);
+
+  useEffect(() => {
+    // Cria e pré-carrega o som
+    beepRef.current = new Audio(`${import.meta.env.BASE_URL}beep.mp3`);
+    beepRef.current.load();
+  }, []);
 
   const playBeep = () => {
-    const context = new AudioContext();
-    const oscillator = context.createOscillator();
-    oscillator.type = "sine";
-    oscillator.frequency.setValueAtTime(880, context.currentTime);
-    oscillator.connect(context.destination);
-    oscillator.start();
-    oscillator.stop(context.currentTime + 0.2);
+    if (beepRef.current) {
+      beepRef.current.currentTime = 0;
+      beepRef.current.play().catch((err) => {
+        console.warn("Erro ao tocar o som:", err);
+      });
+    }
   };
 
   const fetchLogs = async () => {
@@ -56,7 +62,7 @@ const LiveCheckouts = () => {
         prevLogIdsRef.current = new Set(sorted.map((log) => log.log_id));
         setLogs(sorted);
       } else {
-        console.warn("Resposta não é um array:", data);
+        console.warn("Resposta inválida:", data);
         setLogs([]);
       }
     } catch (error) {
@@ -86,8 +92,7 @@ const LiveCheckouts = () => {
         ? `Iniciar processo do aluno(a) ${studentName}?`
         : `Concluir processo do aluno(a) ${studentName}?`;
 
-    const confirmed = window.confirm(confirmMsg);
-    if (!confirmed) return;
+    if (!window.confirm(confirmMsg)) return;
 
     const act =
       newStatus === "Em processamento"
@@ -99,9 +104,7 @@ const LiveCheckouts = () => {
         `https://script.google.com/macros/s/AKfycbzXbl0HQ9NfsskL3fxz_-QUeBAyxeh85GblPpPN6aObkqjmu_gadjzb2yJS22CUDTYL/exec?act=${act}`,
         {
           method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-          },
+          headers: { "Content-Type": "application/x-www-form-urlencoded" },
           body: new URLSearchParams({
             log_id: logId,
             new_status: newStatus,
@@ -110,7 +113,6 @@ const LiveCheckouts = () => {
       );
 
       const result = await response.json();
-
       if (result.success) {
         fetchLogs();
       } else {
@@ -162,56 +164,58 @@ const LiveCheckouts = () => {
             </tr>
           </thead>
           <tbody>
-            {logs
-              .filter((log) => log.log_status !== "Concluído")
-              .map((log) => (
-                <tr key={log.log_id} className={getRowClass(log)}>
-                  <td className="border px-2 py-1">{log.log_student_name}</td>
-                  <td className="border px-2 py-1">
-                    {log.log_student_tutor_name}
-                  </td>
-                  <td className="border px-2 py-1">
-                    {log.log_student_class}
-                  </td>
-                  <td className="border px-2 py-1">
-                    {formatDate(log.log_timestamp)}
-                  </td>
-                  <td className="border px-2 py-1">
-                    {log.log_student_class.toLowerCase() === currentClass && (
-                      <>
-                        {log.log_status === "Iniciado" && (
-                          <button
-                            className="bg-blue-500 text-white px-2 py-1 rounded"
-                            onClick={() =>
-                              handleStatusUpdate(
-                                log.log_id,
-                                "Em processamento",
-                                log.log_student_name
-                              )
-                            }
-                          >
-                            Aceitar solicitação
-                          </button>
-                        )}
-                        {log.log_status === "Em processamento" && (
-                          <button
-                            className="bg-green-600 text-white px-2 py-1 rounded"
-                            onClick={() =>
-                              handleStatusUpdate(
-                                log.log_id,
-                                "Concluído",
-                                log.log_student_name
-                              )
-                            }
-                          >
-                            Concluir
-                          </button>
-                        )}
-                      </>
-                    )}
-                  </td>
-                </tr>
-              ))}
+            {logs.filter((log) => log.log_status !== "Concluído").length === 0 ? (
+              <tr>
+                <td colSpan={5} className="text-center py-4 text-gray-500">
+                  Não há solicitações pendentes
+                </td>
+              </tr>
+            ) : (
+              logs
+                .filter((log) => log.log_status !== "Concluído")
+                .map((log) => (
+                  <tr key={log.log_id} className={getRowClass(log)}>
+                    <td className="border px-2 py-1">{log.log_student_name}</td>
+                    <td className="border px-2 py-1">{log.log_student_tutor_name}</td>
+                    <td className="border px-2 py-1">{log.log_student_class}</td>
+                    <td className="border px-2 py-1">{formatDate(log.log_timestamp)}</td>
+                    <td className="border px-2 py-1">
+                      {log.log_student_class.toLowerCase() === currentClass && (
+                        <>
+                          {log.log_status === "Iniciado" && (
+                            <button
+                              className="bg-blue-500 text-white px-2 py-1 rounded"
+                              onClick={() =>
+                                handleStatusUpdate(
+                                  log.log_id,
+                                  "Em processamento",
+                                  log.log_student_name
+                                )
+                              }
+                            >
+                              Aceitar solicitação
+                            </button>
+                          )}
+                          {log.log_status === "Em processamento" && (
+                            <button
+                              className="bg-green-600 text-white px-2 py-1 rounded"
+                              onClick={() =>
+                                handleStatusUpdate(
+                                  log.log_id,
+                                  "Concluído",
+                                  log.log_student_name
+                                )
+                              }
+                            >
+                              Concluir
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </td>
+                  </tr>
+                ))
+            )}
           </tbody>
         </table>
       )}
