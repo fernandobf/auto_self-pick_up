@@ -47,12 +47,10 @@ function App() {
         <Route
           path="/sala"
           element={
-            <RequireAuth>
-              <LiveCheckouts
-                setOpenOccurrencesCount={setOpenOccurrencesCount}
-                setCurrentClass={setCurrentClass}
-              />
-            </RequireAuth>
+            <LiveCheckouts
+              setOpenOccurrencesCount={setOpenOccurrencesCount}
+              setCurrentClass={setCurrentClass}
+            />
           }
         />
       </Routes>

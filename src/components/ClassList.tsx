@@ -187,7 +187,7 @@ const LiveCheckouts: React.FC<LiveCheckoutsProps> = ({
                     <td className="border px-2 py-1">{log.log_student_class.toUpperCase()}</td>
                     <td className="border px-2 py-1">{formatDate(log.log_timestamp)}</td>
                     <td className="border px-2 py-1">
-                      {currentClassParam ? (
+                      {log.log_student_class.toLowerCase() == currentClassParam ? (
                         log.log_status === "Iniciado" ? (
                           <button
                             className="btn btn-primary"
